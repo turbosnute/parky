@@ -8,6 +8,8 @@ class parky {
     [string]$userId = ''
     [string]$code = ''
     [string]$place = ""
+    [System.Object]$productPaths = @{}
+    [System.Object]$productVariants = @{}
     $baseheaders = @{
         "x-gltlocale" = "en_US_trondheimparkering"
         "x-partnerid" = "trondheimparkering"
@@ -35,7 +37,6 @@ class parky {
     setPlace([string]$place) {
         $this.place = $place
     }
-
 
     [System.Object]GetMfaCode () {
         $uri = "$($this.baseuri)/client/suc-request"
@@ -93,9 +94,97 @@ class parky {
 
         if ($res.resultCode -eq 'SUCCESS') {
             Write-Host -f Green $res.resultCode
+
+            foreach ($product in $res.sections.elements) {
+                Write-Host $product.title
+                $this.productPaths["$($product.title)"] = $product.Path
+            }
+
         } else {
             Write-Host -f Red $res.resultCode
         }
+
+        return $res
+    }
+
+    [System.Object]GetVariants([string]$name) {
+
+        $subpath = $this.productPaths["$name"]
+        $uri = "$($this.baseuri)$subpath"
+        
+        $headers = $this.baseheaders
+        $headers['x-token'] = $this.token
+
+        write-Host -f yellow "$uri"
+        $res = Invoke-RestMethod -Method "GET" -Uri $uri -WebSession $this.session -Headers $headers -SkipHeaderValidation
+
+        $result = if ($res.resultCode -eq 'SUCCESS') {
+            Write-Host -f Green $res.resultCode
+
+            foreach ($variant in $res.sections.elements) {
+                $this.InvokeRest($variant.path)
+            }
+        } else {
+            Write-Host -f Red $res.resultCode
+        }
+
+        return $result.product.variants
+    }
+
+    [System.Object]InvokeRest($path) {
+        $uri = "$($this.baseuri)$path"
+        
+        $headers = $this.baseheaders
+        $headers['x-token'] = $this.token
+
+        write-Host -f yellow "$uri"
+        $res = Invoke-RestMethod -Method "GET" -Uri $uri -WebSession $this.session -Headers $headers -SkipHeaderValidation
+
+        if ($res.resultCode -eq 'SUCCESS') {
+            Write-Host -f Green $res.resultCode
+        } else {
+            Write-Host -f Red $res.resultCode
+        }
+
+        return $res
+    }
+
+    [System.Object]getLicensePlate($plateNumber) {
+        $path = "/vehicle/lookup?regNo=$plateNumber"
+        $res = $this.InvokeRest($path)
+        return $res
+    }
+
+    [System.Object]InvokeParking($plateNumber, $productVariantId) {
+        $subpath = "/permit/aquire"
+        $uri = "$($this.baseuri)$subpath"
+        
+        $headers = $this.baseheaders
+        $headers['x-token'] = $this.token
+
+        $today = (Get-date).ToString("yyyy-MM-dd")
+
+        $payLoadJson = @"
+        {
+            `"formData`": [
+                {
+                    `"name`": `"note`"
+                },
+                {
+                    `"name`": `"plate_number_1`",
+                    `"value`": `"$plateNumber`"
+                },
+                {
+                    `"name`": `"start_date`",
+                    `"value`": `"$today`"
+                }
+            ],
+            `"productVariantId`": `"$productVariantId`"
+        }
+"@
+
+        write-Host -f yellow "$uri"
+        $res = Invoke-RestMethod -Method "POST" -Uri $uri -WebSession $this.session -Headers $headers -SkipHeaderValidation -Body $payLoadJson
 
         return $res
     }
