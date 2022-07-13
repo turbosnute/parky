@@ -57,7 +57,9 @@ Car : HB12345
 Valid From: 2022-07-13 12:41:59
 Expires At: 2022-07-13 21:41:59
 
+
 ```
+
 ## Advanced
 Manually set tokens
 ```
@@ -67,4 +69,7 @@ $park.userId = '1000000'
 $park.token = 'aaa123456-a123-4444-4444-444444444444|444444444444/aaaaaaaaa=='
 $park.refresh_token = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 ```
-
+Keep the session alive. (refresh the token)
+```
+$park.Reauth()
+```
