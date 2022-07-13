@@ -8,6 +8,7 @@ class parky {
     [string]$userId = ''
     [string]$code = ''
     [string]$place = ""
+    [string]$clientIdentifier = "SNWKJJSP7NZ4J1DY"
     [System.Object]$productPaths = @{}
     [System.Object]$productVariants = @{}
     $baseheaders = @{
@@ -213,6 +214,33 @@ class parky {
             Write-Host "$($info.expiresAt)"
 
 
+        } else {
+            Write-Host -f Red $res.resultCode
+        }
+
+        return $res
+    }
+
+    [System.Object]Reauth() {
+        $subpath = "/client/reauth"
+        $uri = "$($this.baseuri)$subpath"
+        
+        $headers = $this.baseheaders
+        $headers['x-token'] = $this.token
+
+        $payLoad = @{
+            clientIdentifier = $this.clientIdentifier
+            refreshToken = $this.refresh_token
+        }
+
+        $jsonPayLoad = $payLoad | ConvertTo-Json
+
+        write-Host -f yellow "$uri"
+        $res = Invoke-RestMethod -Method "POST" -Uri $uri -WebSession $this.session -Headers $headers -SkipHeaderValidation -Body $jsonPayLoad
+
+        if ($res.resultCode -eq 'SUCCESS') {
+            Write-Host -f Green $res.resultCode
+            $this.token = $res.token
         } else {
             Write-Host -f Red $res.resultCode
         }
