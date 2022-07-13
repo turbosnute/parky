@@ -47,7 +47,7 @@ class parky {
         }
 
         $payLoadJson = $payLoad | ConvertTo-Json
-        write-verbose -f yellow "$uri"
+        Write-Host -f yellow "$uri"
         $res = Invoke-RestMethod -Method "POST" -Uri $uri -WebSession $this.session -Headers $headers -Body $payLoadJson -SkipHeaderValidation
 
         if ($res.resultCode -eq 'SUCCESS') {
@@ -185,6 +185,37 @@ class parky {
 
         write-Host -f yellow "$uri"
         $res = Invoke-RestMethod -Method "POST" -Uri $uri -WebSession $this.session -Headers $headers -SkipHeaderValidation -Body $payLoadJson
+
+        return $res
+    }
+
+    [System.Object]getActive() {
+        $subpath = "/permit/list"
+        $uri = "$($this.baseuri)$subpath"
+        
+        $headers = $this.baseheaders
+        $headers['x-token'] = $this.token
+
+        write-Host -f yellow "$uri"
+        $res = Invoke-RestMethod -Method "POST" -Uri $uri -WebSession $this.session -Headers $headers -Body "" -SkipHeaderValidation
+
+        if ($res.resultCode -eq 'SUCCESS') {
+            Write-Host -f Green $res.resultCode
+            $info = $res.permits
+
+            Write-Host -f Green "Name : " -NoNewline
+            Write-Host "$($info.name) $($info.id)"
+            Write-Host -f Green "Car : " -NoNewline
+            Write-Host "$($info.formfields[0].value)"
+            Write-Host -f Green "Valid From: " -NoNewline
+            Write-Host "$($info.validFrom)"
+            Write-Host -f Green "Expires At: " -NoNewline
+            Write-Host "$($info.expiresAt)"
+
+
+        } else {
+            Write-Host -f Red $res.resultCode
+        }
 
         return $res
     }
